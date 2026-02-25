@@ -1,0 +1,333 @@
+@prefix : <https://example.org/legal-ontology#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+############################
+# Ontology header
+############################
+:LegalOntology a owl:Ontology ;
+  rdfs:label "Legal Knowledge Base Ontology (Example)"@en ;
+  rdfs:comment "Example OWL ontology for a Brazilian-oriented legal knowledge base: norms, provisions, cases, decisions, parties, topics, and temporal validity."@en .
+
+############################
+# Core classes
+############################
+:LegalSource a owl:Class ;
+  rdfs:label "Legal Source"@en ;
+  rdfs:comment "A generic legal information source: norms, decisions, doctrine."@en .
+
+:Norm a owl:Class ;
+  rdfs:subClassOf :LegalSource ;
+  rdfs:label "Norm"@en ;
+  rdfs:comment "A normative act (constitution, law, decree, resolution, etc.)."@en .
+
+:Provision a owl:Class ;
+  rdfs:subClassOf :LegalSource ;
+  rdfs:label "Provision"@en ;
+  rdfs:comment "A granular normative unit (article, paragraph, inciso, alínea)."@en .
+
+:Decision a owl:Class ;
+  rdfs:subClassOf :LegalSource ;
+  rdfs:label "Decision"@en ;
+  rdfs:comment "A judicial decision (sentence, ruling, acórdão)."@en .
+
+:Case a owl:Class ;
+  rdfs:label "Case"@en ;
+  rdfs:comment "A judicial case/process (processo) identified by a case number and metadata."@en .
+
+:Court a owl:Class ;
+  rdfs:label "Court"@en ;
+  rdfs:comment "A court or judicial body (e.g., STF, STJ, TJSP)."@en .
+
+:Chamber a owl:Class ;
+  rdfs:label "Chamber"@en ;
+  rdfs:comment "A judging chamber/panel within a court (e.g., Turma, Câmara)."@en .
+
+:Person a owl:Class ;
+  rdfs:label "Person"@en .
+
+:Organization a owl:Class ;
+  rdfs:label "Organization"@en .
+
+:Party a owl:Class ;
+  rdfs:label "Party"@en ;
+  rdfs:comment "A litigant/party in a case (plaintiff/defendant), can be person or organization."@en .
+
+:Lawyer a owl:Class ;
+  rdfs:subClassOf :Person ;
+  rdfs:label "Lawyer"@en .
+
+:Judge a owl:Class ;
+  rdfs:subClassOf :Person ;
+  rdfs:label "Judge"@en .
+
+:Topic a owl:Class ;
+  rdfs:label "Legal Topic"@en ;
+  rdfs:comment "A taxonomy node representing a legal theme (e.g., Civil Law > Torts > Moral damages)."@en .
+
+:Jurisdiction a owl:Class ;
+  rdfs:label "Jurisdiction"@en ;
+  rdfs:comment "A jurisdictional scope (country/state/municipality), e.g., BR, SP."@en .
+
+:TemporalValidity a owl:Class ;
+  rdfs:label "Temporal Validity"@en ;
+  rdfs:comment "A validity interval for norms/provisions (effectiveFrom/effectiveTo)."@en .
+
+############################
+# Enumerations via subclasses
+############################
+:NormType a owl:Class ;
+  rdfs:label "Norm Type"@en .
+
+:Constitution a owl:Class ; rdfs:subClassOf :NormType .
+:Law a owl:Class ; rdfs:subClassOf :NormType .
+:Decree a owl:Class ; rdfs:subClassOf :NormType .
+:Resolution a owl:Class ; rdfs:subClassOf :NormType .
+:Ordinance a owl:Class ; rdfs:subClassOf :NormType .
+
+:ProvisionType a owl:Class ;
+  rdfs:label "Provision Type"@en .
+
+:Article a owl:Class ; rdfs:subClassOf :ProvisionType .
+:Paragraph a owl:Class ; rdfs:subClassOf :ProvisionType .
+:Inciso a owl:Class ; rdfs:subClassOf :ProvisionType .
+:Alinea a owl:Class ; rdfs:subClassOf :ProvisionType .
+
+:DecisionType a owl:Class ;
+  rdfs:label "Decision Type"@en .
+
+:Acórdão a owl:Class ; rdfs:subClassOf :DecisionType .
+:Sentença a owl:Class ; rdfs:subClassOf :DecisionType .
+:Despacho a owl:Class ; rdfs:subClassOf :DecisionType .
+
+:PartyRole a owl:Class ;
+  rdfs:label "Party Role"@en .
+
+:Plaintiff a owl:Class ; rdfs:subClassOf :PartyRole .
+:Defendant a owl:Class ; rdfs:subClassOf :PartyRole .
+:Appellant a owl:Class ; rdfs:subClassOf :PartyRole .
+:Appellee a owl:Class ; rdfs:subClassOf :PartyRole .
+
+############################
+# Object properties
+############################
+:hasProvision a owl:ObjectProperty ;
+  rdfs:domain :Norm ;
+  rdfs:range :Provision ;
+  rdfs:label "has provision"@en .
+
+:isProvisionOf a owl:ObjectProperty ;
+  rdfs:domain :Provision ;
+  rdfs:range :Norm ;
+  owl:inverseOf :hasProvision ;
+  rdfs:label "is provision of"@en .
+
+:amends a owl:ObjectProperty ;
+  rdfs:domain :Norm ;
+  rdfs:range :Norm ;
+  rdfs:label "amends"@en ;
+  rdfs:comment "Norm A changes Norm B."@en .
+
+:revokes a owl:ObjectProperty ;
+  rdfs:domain :Norm ;
+  rdfs:range :Norm ;
+  rdfs:label "revokes"@en .
+
+:regulates a owl:ObjectProperty ;
+  rdfs:domain :Norm ;
+  rdfs:range :Norm ;
+  rdfs:label "regulates"@en ;
+  rdfs:comment "Norm A regulates Norm B (e.g., decree regulates law)."@en .
+
+:referencesProvision a owl:ObjectProperty ;
+  rdfs:domain :Provision ;
+  rdfs:range :Provision ;
+  rdfs:label "references provision"@en .
+
+:cites a owl:ObjectProperty ;
+  rdfs:domain :Decision ;
+  rdfs:range :LegalSource ;
+  rdfs:label "cites"@en ;
+  rdfs:comment "Decision cites a norm/provision/other decision/doctrine."@en .
+
+:applies a owl:ObjectProperty ;
+  rdfs:domain :Decision ;
+  rdfs:range :Provision ;
+  rdfs:label "applies"@en ;
+  rdfs:comment "Decision applies a provision as legal basis."@en .
+
+:decidesCase a owl:ObjectProperty ;
+  rdfs:domain :Decision ;
+  rdfs:range :Case ;
+  rdfs:label "decides case"@en .
+
+:heardByCourt a owl:ObjectProperty ;
+  rdfs:domain :Case ;
+  rdfs:range :Court ;
+  rdfs:label "heard by court"@en .
+
+:heardByChamber a owl:ObjectProperty ;
+  rdfs:domain :Case ;
+  rdfs:range :Chamber ;
+  rdfs:label "heard by chamber"@en .
+
+:hasRelator a owl:ObjectProperty ;
+  rdfs:domain :Decision ;
+  rdfs:range :Judge ;
+  rdfs:label "has relator"@en .
+
+:hasParty a owl:ObjectProperty ;
+  rdfs:domain :Case ;
+  rdfs:range :Party ;
+  rdfs:label "has party"@en .
+
+:partyEntity a owl:ObjectProperty ;
+  rdfs:domain :Party ;
+  rdfs:range [ a owl:Class ; owl:unionOf ( :Person :Organization ) ] ;
+  rdfs:label "party entity"@en .
+
+:partyRole a owl:ObjectProperty ;
+  rdfs:domain :Party ;
+  rdfs:range :PartyRole ;
+  rdfs:label "party role"@en .
+
+:representedBy a owl:ObjectProperty ;
+  rdfs:domain :Party ;
+  rdfs:range :Lawyer ;
+  rdfs:label "represented by"@en .
+
+:aboutTopic a owl:ObjectProperty ;
+  rdfs:domain :LegalSource ;
+  rdfs:range :Topic ;
+  rdfs:label "about topic"@en .
+
+:broaderTopic a owl:ObjectProperty ;
+  rdfs:domain :Topic ;
+  rdfs:range :Topic ;
+  rdfs:label "broader topic"@en .
+
+:inJurisdiction a owl:ObjectProperty ;
+  rdfs:domain :LegalSource ;
+  rdfs:range :Jurisdiction ;
+  rdfs:label "in jurisdiction"@en .
+
+:hasValidity a owl:ObjectProperty ;
+  rdfs:domain :LegalSource ;
+  rdfs:range :TemporalValidity ;
+  rdfs:label "has validity"@en .
+
+############################
+# Datatype properties
+############################
+:identifier a owl:DatatypeProperty ;
+  rdfs:domain :LegalSource ;
+  rdfs:range xsd:string ;
+  rdfs:label "identifier"@en .
+
+:title a owl:DatatypeProperty ;
+  rdfs:domain :LegalSource ;
+  rdfs:range xsd:string ;
+  rdfs:label "title"@en .
+
+:text a owl:DatatypeProperty ;
+  rdfs:domain :LegalSource ;
+  rdfs:range xsd:string ;
+  rdfs:label "text"@en .
+
+:publishedOn a owl:DatatypeProperty ;
+  rdfs:domain :Norm ;
+  rdfs:range xsd:date ;
+  rdfs:label "published on"@en .
+
+:decisionDate a owl:DatatypeProperty ;
+  rdfs:domain :Decision ;
+  rdfs:range xsd:date ;
+  rdfs:label "decision date"@en .
+
+:caseNumber a owl:DatatypeProperty ;
+  rdfs:domain :Case ;
+  rdfs:range xsd:string ;
+  rdfs:label "case number"@en .
+
+:effectiveFrom a owl:DatatypeProperty ;
+  rdfs:domain :TemporalValidity ;
+  rdfs:range xsd:date ;
+  rdfs:label "effective from"@en .
+
+:effectiveTo a owl:DatatypeProperty ;
+  rdfs:domain :TemporalValidity ;
+  rdfs:range xsd:date ;
+  rdfs:label "effective to"@en .
+
+############################
+# Constraints (OWL restrictions)
+############################
+:Provision rdfs:subClassOf [
+  a owl:Restriction ;
+  owl:onProperty :isProvisionOf ;
+  owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ;
+  owl:onClass :Norm
+] .
+
+:Decision rdfs:subClassOf [
+  a owl:Restriction ;
+  owl:onProperty :decidesCase ;
+  owl:minQualifiedCardinality "1"^^xsd:nonNegativeInteger ;
+  owl:onClass :Case
+] .
+
+:Case rdfs:subClassOf [
+  a owl:Restriction ;
+  owl:onProperty :heardByCourt ;
+  owl:minQualifiedCardinality "1"^^xsd:nonNegativeInteger ;
+  owl:onClass :Court
+] .
+
+############################
+# Example individuals
+############################
+:BR a :Jurisdiction ;
+  rdfs:label "Brasil"@pt-BR .
+
+:ResponsabilidadeCivil a :Topic ;
+  rdfs:label "Responsabilidade Civil"@pt-BR .
+
+:DanoMoral a :Topic ;
+  rdfs:label "Dano Moral"@pt-BR ;
+  :broaderTopic :ResponsabilidadeCivil .
+
+:CC_Lei10406_2002 a :Norm ;
+  :identifier "lei_10406_2002" ;
+  :title "Código Civil"@pt-BR ;
+  :publishedOn "2002-01-10"^^xsd:date ;
+  :inJurisdiction :BR ;
+  :aboutTopic :ResponsabilidadeCivil .
+
+:CC_Art186 a :Provision ;
+  :identifier "lei_10406_2002_art_186" ;
+  :text "Aquele que, por ação ou omissão voluntária, negligência ou imprudência, violar direito..."@pt-BR ;
+  :isProvisionOf :CC_Lei10406_2002 ;
+  :inJurisdiction :BR ;
+  :aboutTopic :DanoMoral .
+
+:STJ a :Court ;
+  rdfs:label "Superior Tribunal de Justiça"@pt-BR .
+
+:REsp123456 a :Case ;
+  :caseNumber "REsp 123456" ;
+  :heardByCourt :STJ .
+
+:RelatorFulano a :Judge ;
+  rdfs:label "Fulano de Tal"@pt-BR .
+
+:Dec_STJ_REsp123456 a :Decision ;
+  :identifier "stj_resp_123456" ;
+  :decisionDate "2024-05-12"^^xsd:date ;
+  :decidesCase :REsp123456 ;
+  :hasRelator :RelatorFulano ;
+  :applies :CC_Art186 ;
+  :cites :CC_Lei10406_2002 ;
+  :aboutTopic :DanoMoral ;
+  :inJurisdiction :BR .

@@ -1,0 +1,13 @@
+{"source": "norm_cc_2002", "relation": "hasProvision", "target": "prov_cc_art_186"}
+{"source": "norm_cc_2002", "relation": "hasProvision", "target": "prov_cc_art_927"}
+{"source": "norm_cdc_8078_1990", "relation": "hasProvision", "target": "prov_cdc_art_14"}
+{"source": "decision_stj_resp_123456", "relation": "applies", "target": "prov_cc_art_186"}
+{"source": "decision_stj_resp_123456", "relation": "applies", "target": "prov_cc_art_927"}
+{"source": "decision_stj_resp_123456", "relation": "cites", "target": "norm_cc_2002"}
+{"source": "decision_stj_resp_998877", "relation": "applies", "target": "prov_cdc_art_14"}
+{"source": "decision_stj_resp_998877", "relation": "cites", "target": "norm_cdc_8078_1990"}
+{"source": "decision_stj_resp_123456", "relation": "decidesCase", "target": "case_resp_123456"}
+{"source": "case_resp_123456", "relation": "heardByCourt", "target": "court_stj"}
+{"source": "decision_stj_resp_123456", "relation": "aboutTopic", "target": "topic_dano_moral"}
+{"source": "prov_cc_art_186", "relation": "aboutTopic", "target": "topic_dano_moral"}
+{"source": "prov_cc_art_927", "relation": "aboutTopic", "target": "topic_responsabilidade_civil"}

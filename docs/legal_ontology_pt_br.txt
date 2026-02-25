@@ -1,0 +1,124 @@
+Ontologia de Base de Conhecimento Juridica (Portugues)
+======================================================
+
+1) Proposito e Escopo
+---------------------
+Esta ontologia modela conhecimento juridico para uma base orientada ao contexto brasileiro.
+Ela representa normas, dispositivos legais, processos judiciais, decisoes, partes,
+topicos juridicos e vigencia temporal para indexacao, vinculacao e consulta.
+
+Objetivos principais:
+- Normalizar entidades e relacoes juridicas.
+- Suportar recuperacao (RAG/GraphRAG) com estrutura legal explicita.
+- Permitir raciocinio sobre citacoes, aplicabilidade e vigencia.
+
+
+2) Classes Centrais
+-------------------
+LegalSource: fonte juridica generica (normas, decisoes, doutrina/referencias).
+Norm: ato normativo (constituicao, lei, decreto, resolucao, portaria).
+Provision: unidade normativa granular (artigo, paragrafo, inciso, alinea).
+Decision: decisao judicial (sentenca, acordao, despacho).
+Case: processo judicial identificado por numero.
+Court: orgao judicial (ex.: STF, STJ, TJSP).
+Chamber: turma/camara julgadora dentro de um tribunal.
+Person / Organization: atores juridicos basicos.
+Party: parte litigante no processo (pessoa ou organizacao).
+Lawyer: subclasse de Person para advogado.
+Judge: subclasse de Person para magistrado.
+Topic: conceito de taxonomia juridica (ex.: Responsabilidade Civil, Dano Moral).
+Jurisdiction: escopo territorial/juridico (ex.: BR, SP).
+TemporalValidity: intervalo de vigencia de fontes juridicas.
+
+
+3) Hierarquias Controladas (Enumeracoes)
+-----------------------------------------
+Subclasses de NormType: Constitution, Law, Decree, Resolution, Ordinance.
+Subclasses de ProvisionType: Article, Paragraph, Inciso, Alinea.
+Subclasses de DecisionType: Acordao, Sentenca, Despacho.
+Subclasses de PartyRole: Plaintiff, Defendant, Appellant, Appellee.
+
+Essas subclasses controladas padronizam classificacoes legais.
+
+
+4) Principais Propriedades de Objeto
+------------------------------------
+Norm -> Provision:
+- hasProvision / isProvisionOf (relacao inversa).
+
+Norm -> Norm:
+- amends, revokes, regulates.
+
+Provision -> Provision:
+- referencesProvision.
+
+Decision -> LegalSource:
+- cites (referencia normas/dispositivos/decisoes).
+
+Decision -> Provision:
+- applies (fundamento legal aplicado na decisao).
+
+Decision -> Case:
+- decidesCase.
+
+Case -> Court / Chamber / Party:
+- heardByCourt, heardByChamber, hasParty.
+
+Party -> Person|Organization / PartyRole / Lawyer:
+- partyEntity, partyRole, representedBy.
+
+LegalSource -> Topic / Jurisdiction / TemporalValidity:
+- aboutTopic, inJurisdiction, hasValidity.
+
+Topic -> Topic:
+- broaderTopic (hierarquia da taxonomia).
+
+
+5) Principais Propriedades de Dados
+------------------------------------
+identifier (string): identificador canonico da fonte.
+title (string): titulo juridico.
+text (string): conteudo textual.
+publishedOn (date): data de publicacao da norma.
+decisionDate (date): data da decisao judicial.
+caseNumber (string): numero do processo.
+effectiveFrom / effectiveTo (date): intervalo de vigencia.
+
+
+6) Restricoes Estruturais
+-------------------------
+Regra de cardinalidade de Provision:
+- Toda Provision pertence a exatamente 1 Norm.
+
+Regra de cardinalidade de Decision:
+- Toda Decision decide pelo menos 1 Case.
+
+Regra de cardinalidade de Case:
+- Todo Case e julgado por pelo menos 1 Court.
+
+Essas restricoes mantem o grafo juridicamente coerente e reduzem ambiguidade.
+
+
+7) Exemplo de Cadeia Juridica
+-----------------------------
+- Norma: Codigo Civil (Lei 10.406/2002).
+- Dispositivo: Artigo 186 (responsabilidade civil por ato ilicito).
+- Processo: REsp 123456, julgado no STJ.
+- Decisao: aplica Art. 186 e cita o Codigo Civil.
+- Topicos: Dano Moral -> topico mais amplo Responsabilidade Civil.
+- Jurisdicao: BR.
+
+Essa cadeia permite perguntas como:
+- Quais decisoes aplicaram o Art. 186?
+- Quais topicos sao mais citados em casos do STJ?
+- Quais dispositivos estao vigentes em determinada data?
+
+
+8) Por que esta ontologia funciona bem para Graph RAG
+------------------------------------------------------
+- Normalizacao de entidades melhora precisao da recuperacao.
+- Relacoes explicitas (cites/applies/decidesCase) permitem raciocinio multi-hop.
+- Vigencia temporal suporta analise juridica historica.
+- Hierarquia de topicos favorece expansao semantica e navegacao facetada.
+
+Fim do documento.

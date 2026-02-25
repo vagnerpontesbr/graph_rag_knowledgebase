@@ -1,0 +1,155 @@
+// MongoDB setup script for rag_knowledgebase
+// Usage:
+//   MONGODB_DB=rag_knowledgebase \
+//   VECTOR_COLLECTION=legal_documents \
+//   RELATIONS_COLLECTION=legal_relations \
+//   GRAPH_COLLECTION=legal_graph \
+//   VECTOR_INDEX_NAME=legal_vector_index \
+//   SEARCH_INDEX_NAME=legal_search_index \
+//   EMBEDDING_DIMS=1024 \
+//   mongosh "$MONGODB_URI" --file setup_database_scripts
+
+const DB_NAME = process.env.MONGODB_DB || "rag_knowledgebase";
+const VECTOR_COLLECTION = process.env.VECTOR_COLLECTION || "legal_documents";
+const RELATIONS_COLLECTION = process.env.RELATIONS_COLLECTION || "legal_relations";
+const GRAPH_COLLECTION = process.env.GRAPH_COLLECTION || "legal_graph";
+const VECTOR_INDEX_NAME = process.env.VECTOR_INDEX_NAME || "legal_vector_index";
+const SEARCH_INDEX_NAME = process.env.SEARCH_INDEX_NAME || "legal_search_index";
+const EMBEDDING_DIMS = Number(process.env.EMBEDDING_DIMS || 1024);
+
+const dbTarget = db.getSiblingDB(DB_NAME);
+
+function ensureCollection(name) {
+  const exists = dbTarget.getCollectionNames().includes(name);
+  if (!exists) {
+    dbTarget.createCollection(name);
+    print(`[ok] created collection: ${name}`);
+  } else {
+    print(`[ok] collection exists: ${name}`);
+  }
+}
+
+ensureCollection(VECTOR_COLLECTION);
+ensureCollection(RELATIONS_COLLECTION);
+ensureCollection(GRAPH_COLLECTION);
+
+const vectorColl = dbTarget.getCollection(VECTOR_COLLECTION);
+const relColl = dbTarget.getCollection(RELATIONS_COLLECTION);
+const graphColl = dbTarget.getCollection(GRAPH_COLLECTION);
+
+// ------------------------------------------------------------
+// Standard indexes (B-Tree)
+// ------------------------------------------------------------
+
+// Vector docs metadata indexes
+vectorColl.createIndex({ "metadata.doc_id": 1 }, { name: "metadata_doc_id_idx", sparse: true });
+vectorColl.createIndex({ "metadata.doc_type": 1, "metadata.topic": 1 }, { name: "metadata_type_topic_idx", sparse: true });
+vectorColl.createIndex({ "metadata.jurisdiction": 1 }, { name: "metadata_jurisdiction_idx", sparse: true });
+vectorColl.createIndex({ "metadata.source_type": 1 }, { name: "metadata_source_type_idx", sparse: true });
+vectorColl.createIndex({ "metadata.case_number": 1 }, { name: "metadata_case_number_idx", sparse: true });
+
+// Relations indexes
+relColl.createIndex({ source: 1, relation: 1, target: 1 }, { name: "relation_triplet_uq", unique: true });
+relColl.createIndex({ source: 1 }, { name: "relation_source_idx" });
+relColl.createIndex({ target: 1 }, { name: "relation_target_idx" });
+relColl.createIndex({ relation: 1 }, { name: "relation_name_idx" });
+
+// Graph collection optional indexes (safe/sparse)
+graphColl.createIndex({ entity_id: 1 }, { name: "graph_entity_id_idx", sparse: true });
+graphColl.createIndex({ source_id: 1, target_id: 1 }, { name: "graph_edge_source_target_idx", sparse: true });
+graphColl.createIndex({ relation: 1 }, { name: "graph_relation_idx", sparse: true });
+
+print("[ok] standard indexes created/validated.");
+
+// ------------------------------------------------------------
+// Atlas Search index (keyword/full-text)
+// ------------------------------------------------------------
+
+const searchIndexDefinition = {
+  mappings: {
+    dynamic: false,
+    fields: {
+      text: { type: "string" },
+      metadata: {
+        type: "document",
+        fields: {
+          title: { type: "string" },
+          doc_type: { type: "string" },
+          topic: { type: "string" },
+          jurisdiction: { type: "string" },
+          source_type: { type: "string" },
+        },
+      },
+    },
+  },
+};
+
+// ------------------------------------------------------------
+// Atlas Vector Search index
+// ------------------------------------------------------------
+
+const vectorIndexDefinition = {
+  fields: [
+    {
+      type: "vector",
+      path: "embedding",
+      numDimensions: EMBEDDING_DIMS,
+      similarity: "cosine",
+    },
+    { type: "filter", path: "metadata.doc_type" },
+    { type: "filter", path: "metadata.topic" },
+    { type: "filter", path: "metadata.jurisdiction" },
+    { type: "filter", path: "metadata.source_type" },
+  ],
+};
+
+function upsertSearchIndex(collection, name, definition, type) {
+  if (typeof collection.getSearchIndexes !== "function") {
+    print("[warn] getSearchIndexes helper unavailable. Atlas Search helper methods may not be supported in this shell.");
+    return;
+  }
+
+  const existing = collection.getSearchIndexes().find((idx) => idx.name === name);
+  if (existing) {
+    collection.updateSearchIndex(name, definition);
+    print(`[ok] updated ${type || "search"} index: ${name}`);
+    return;
+  }
+
+  if (type) {
+    collection.createSearchIndex({ name, type, definition });
+  } else {
+    collection.createSearchIndex({ name, definition });
+  }
+  print(`[ok] created ${type || "search"} index: ${name}`);
+}
+
+try {
+  upsertSearchIndex(vectorColl, SEARCH_INDEX_NAME, searchIndexDefinition, "search");
+  upsertSearchIndex(vectorColl, VECTOR_INDEX_NAME, vectorIndexDefinition, "vectorSearch");
+
+  print("[ok] Atlas Search indexes requested.");
+  print("[info] Index build is asynchronous. Check Atlas UI until status = READY.");
+
+  if (typeof vectorColl.getSearchIndexes === "function") {
+    print("[info] Current search indexes:");
+    printjson(
+      vectorColl.getSearchIndexes().map((idx) => ({
+        name: idx.name,
+        type: idx.type,
+        status: idx.status,
+      }))
+    );
+  }
+} catch (err) {
+  print("[warn] Could not create/update Atlas Search indexes via helper methods.");
+  print("[warn] Create manually in Atlas UI using these definitions:");
+  print("[warn] --- Search index definition ---");
+  printjson(searchIndexDefinition);
+  print("[warn] --- Vector index definition ---");
+  printjson(vectorIndexDefinition);
+  print("[warn] Error details:");
+  print(err);
+}
+
+print("[done] Database structure setup completed.");

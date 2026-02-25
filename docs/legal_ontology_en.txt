@@ -1,0 +1,124 @@
+Legal Knowledge Base Ontology (English)
+=======================================
+
+1) Purpose and Scope
+--------------------
+This ontology models legal knowledge for a Brazilian-oriented legal knowledge base.
+It represents laws, legal provisions, court cases, judicial decisions, parties, topics,
+and temporal validity so that legal information can be indexed, linked, and queried.
+
+Primary goals:
+- Normalize legal entities and relationships.
+- Support retrieval (RAG/GraphRAG) with explicit legal structure.
+- Enable reasoning over citations, applicability, and legal validity periods.
+
+
+2) Core Classes
+---------------
+LegalSource: Generic legal source (norms, decisions, doctrine-like references).
+Norm: Normative act (constitution, law, decree, resolution, ordinance).
+Provision: Granular legal unit (article, paragraph, inciso, alinea).
+Decision: Judicial decision (sentence, ruling, appellate decision).
+Case: Judicial process identified by a case number.
+Court: Judicial body (for example STF, STJ, TJSP).
+Chamber: Panel/chamber inside a court.
+Person / Organization: Basic legal actors.
+Party: Litigating party in a case (person or organization).
+Lawyer: Person subclass representing legal counsel.
+Judge: Person subclass representing a judge.
+Topic: Legal taxonomy concept (for example Civil Liability, Moral Damages).
+Jurisdiction: Territorial/legal scope (for example BR, SP).
+TemporalValidity: Effective interval for legal sources.
+
+
+3) Controlled Type Hierarchies (Enumerations)
+----------------------------------------------
+NormType subclasses: Constitution, Law, Decree, Resolution, Ordinance.
+ProvisionType subclasses: Article, Paragraph, Inciso, Alinea.
+DecisionType subclasses: Acordao, Sentenca, Despacho.
+PartyRole subclasses: Plaintiff, Defendant, Appellant, Appellee.
+
+These controlled subclasses help standardize values for legal classification.
+
+
+4) Key Object Properties
+------------------------
+Norm -> Provision:
+- hasProvision / isProvisionOf (inverse relation).
+
+Norm -> Norm:
+- amends, revokes, regulates.
+
+Provision -> Provision:
+- referencesProvision.
+
+Decision -> LegalSource:
+- cites (references norms/provisions/decisions).
+
+Decision -> Provision:
+- applies (legal basis applied by the decision).
+
+Decision -> Case:
+- decidesCase.
+
+Case -> Court / Chamber / Party:
+- heardByCourt, heardByChamber, hasParty.
+
+Party -> Person|Organization / PartyRole / Lawyer:
+- partyEntity, partyRole, representedBy.
+
+LegalSource -> Topic / Jurisdiction / TemporalValidity:
+- aboutTopic, inJurisdiction, hasValidity.
+
+Topic -> Topic:
+- broaderTopic (taxonomy hierarchy).
+
+
+5) Key Datatype Properties
+--------------------------
+identifier (string): canonical legal source id.
+title (string): legal title.
+text (string): legal text content.
+publishedOn (date): publication date for norms.
+decisionDate (date): date of judicial decision.
+caseNumber (string): judicial case identifier.
+effectiveFrom / effectiveTo (date): legal validity interval.
+
+
+6) Structural Constraints
+-------------------------
+Provision cardinality rule:
+- Every Provision belongs to exactly 1 Norm.
+
+Decision cardinality rule:
+- Every Decision decides at least 1 Case.
+
+Case cardinality rule:
+- Every Case is heard by at least 1 Court.
+
+These constraints keep the graph legally coherent and reduce data ambiguity.
+
+
+7) Example Legal Chain
+----------------------
+- Norm: Brazilian Civil Code (Law 10.406/2002).
+- Provision: Article 186 (civil liability by wrongful act).
+- Case: REsp 123456, heard by STJ.
+- Decision: a decision applies Article 186 and cites the Civil Code.
+- Topic linkage: Moral Damages -> broader topic Civil Liability.
+- Jurisdiction: BR.
+
+This chain enables queries such as:
+- Which decisions applied Article 186?
+- Which topics are most cited in STJ cases?
+- Which provisions are currently effective in BR?
+
+
+8) Why This Ontology Works Well for Graph RAG
+----------------------------------------------
+- Entity normalization improves retrieval precision.
+- Explicit edges (cites/applies/decidesCase) enable multi-hop reasoning.
+- Temporal validity supports historical legal analysis.
+- Topic hierarchy enables semantic expansion and faceted navigation.
+
+End of document.
