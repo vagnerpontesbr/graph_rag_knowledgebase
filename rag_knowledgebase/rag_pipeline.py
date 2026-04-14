@@ -22,8 +22,14 @@ from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_openai import ChatOpenAI
 
 from .config import Settings
-from .db_setup import ensure_database_objects
+from .db_setup import ensure_database_objects, vector_index_status
 from .mongodb import get_client
+
+_MONGOT_ERROR_HINT = (
+    "Atlas Vector Search index is not reachable (mongot process on port 28000). "
+    "This usually means the index is still building or does not exist yet. "
+    "Check the index status in the sidebar and wait for it to reach READY."
+)
 
 
 class VoyageEmbeddings(Embeddings):
@@ -181,7 +187,7 @@ def ingest_graph_documents(settings: Settings) -> int:
     return len(docs)
 
 
-def _answer_with_context(settings: Settings, question: str, docs: list[Document]) -> str:
+def _answer_with_context(settings: Settings, question: str, docs: list[Document], language: str = "pt") -> str:
     llm = ChatOpenAI(model=settings.llm_model, api_key=settings.openai_api_key, temperature=0)
 
     context = "\n\n".join(
@@ -189,32 +195,38 @@ def _answer_with_context(settings: Settings, question: str, docs: list[Document]
         for i, d in enumerate(docs, start=1)
     )
 
+    if language == "en":
+        system_msg = (
+            "You are a legal assistant. Answer strictly based on the provided context. "
+            "If the context lacks sufficient legal basis, say so explicitly. "
+            "IMPORTANT: You MUST respond in English regardless of the language of the context."
+        )
+        user_msg = (
+            f"Question:\n{question}\n\n"
+            f"Retrieved legal context:\n{context}\n\n"
+            "Answer in English, citing the document titles used."
+        )
+    else:
+        system_msg = (
+            "Você é um assistente jurídico. Responda com base apenas no contexto fornecido. "
+            "Se faltar base legal no contexto, diga explicitamente que não há evidência suficiente."
+        )
+        user_msg = (
+            f"Pergunta:\n{question}\n\n"
+            f"Contexto jurídico recuperado:\n{context}\n\n"
+            "Responda em português, citando os títulos dos documentos usados."
+        )
+
     messages = [
-        SystemMessage(
-            content=(
-                "Você é um assistente jurídico. Responda com base apenas no contexto fornecido. "
-                "Se faltar base legal no contexto, diga explicitamente que não há evidência suficiente."
-            )
-        ),
-        HumanMessage(
-            content=(
-                f"Pergunta:\n{question}\n\n"
-                f"Contexto jurídico recuperado:\n{context}\n\n"
-                "Responda em português, citando os títulos dos documentos usados."
-            )
-        ),
+        SystemMessage(content=system_msg),
+        HumanMessage(content=user_msg),
     ]
 
     response = llm.invoke(messages)
     return response.content if hasattr(response, "content") else str(response)
 
 
-def _graph_answer(settings: Settings, question: str) -> str | None:
-    answer, _ = _graph_answer_with_error(settings, question)
-    return answer
-
-
-def _graph_answer_with_error(settings: Settings, question: str) -> tuple[str | None, str | None]:
+def _graph_answer_with_error(settings: Settings, question: str, language: str = "pt") -> tuple[str | None, str | None]:
     try:
         graph_store_cls = _load_mongodb_graph_store()
         llm = ChatOpenAI(model=settings.llm_model, api_key=settings.openai_api_key, temperature=0)
@@ -242,12 +254,20 @@ def _graph_answer_with_error(settings: Settings, question: str) -> tuple[str | N
                 f"- {e.get('source')} --{e.get('relation')}--> {e.get('target')}" for e in edges
             )
             llm = ChatOpenAI(model=settings.llm_model, api_key=settings.openai_api_key, temperature=0)
-            prompt = (
-                "Você é um assistente jurídico. Use somente os fatos de relacionamento abaixo.\n"
-                f"Pergunta: {question}\n\n"
-                f"Fatos:\n{facts}\n\n"
-                "Responda em português e diga quando os fatos forem insuficientes."
-            )
+            if language == "en":
+                prompt = (
+                    "You are a legal assistant. Use only the relationship facts listed below.\n"
+                    f"Question: {question}\n\n"
+                    f"Facts:\n{facts}\n\n"
+                    "IMPORTANT: Respond in English. State clearly when the facts are insufficient."
+                )
+            else:
+                prompt = (
+                    "Você é um assistente jurídico. Use somente os fatos de relacionamento abaixo.\n"
+                    f"Pergunta: {question}\n\n"
+                    f"Fatos:\n{facts}\n\n"
+                    "Responda em português e diga quando os fatos forem insuficientes."
+                )
             response = llm.invoke([HumanMessage(content=prompt)])
             content = response.content if hasattr(response, "content") else str(response)
             return str(content), f"{type(primary_exc).__name__}: {primary_exc}"
@@ -258,12 +278,23 @@ def _graph_answer_with_error(settings: Settings, question: str) -> tuple[str | N
             )
 
 
-def legal_rag_answer(settings: Settings, question: str, use_graph_rag: bool) -> dict[str, Any]:
+def legal_rag_answer(
+    settings: Settings, question: str, use_graph_rag: bool, language: str = "pt"
+) -> dict[str, Any]:
     vector_store = _vector_store(settings)
-    docs_with_scores = vector_store.similarity_search_with_score(question, k=settings.top_k)
+    try:
+        docs_with_scores = vector_store.similarity_search_with_score(question, k=settings.top_k)
+    except Exception as exc:  # noqa: BLE001
+        err_str = str(exc)
+        if "28000" in err_str or "mongot" in err_str.lower() or "HostUnreachable" in err_str:
+            status = vector_index_status(settings)
+            raise RuntimeError(
+                f"{_MONGOT_ERROR_HINT}\n\nCurrent index status: {status}"
+            ) from exc
+        raise
     docs = [d for d, _ in docs_with_scores]
 
-    vector_answer = _answer_with_context(settings, question, docs)
+    vector_answer = _answer_with_context(settings, question, docs, language=language)
 
     retrieved = [
         {
@@ -280,7 +311,7 @@ def legal_rag_answer(settings: Settings, question: str, use_graph_rag: bool) -> 
     }
 
     if use_graph_rag:
-        graph_answer, graph_error = _graph_answer_with_error(settings, question)
+        graph_answer, graph_error = _graph_answer_with_error(settings, question, language=language)
         output["graph_answer"] = graph_answer
         if graph_error:
             output["graph_error"] = graph_error

@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Technical Analysis — Graph RAG Knowledgebase</title>
+  <style>
+    :root {
+      --bg: #f4efe6;
+      --panel: #fffaf3;
+      --panel-strong: #fff3dd;
+      --ink: #1d2a22;
+      --muted: #5d6c63;
+      --line: #d8c9af;
+      --accent: #0f6b46;
+      --accent-2: #b25a2b;
+      --accent-3: #123d63;
+      --shadow: 0 18px 50px rgba(32, 28, 20, 0.08);
+      --radius: 18px;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      --sans: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--sans);
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(15, 107, 70, 0.10), transparent 30%),
+        radial-gradient(circle at top right, rgba(178, 90, 43, 0.11), transparent 28%),
+        linear-gradient(180deg, #f8f4ec 0%, var(--bg) 100%);
+      line-height: 1.65;
+    }
+
+    .shell {
+      width: min(1180px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 28px 0 64px;
+    }
+
+    .hero {
+      background:
+        linear-gradient(135deg, rgba(18, 61, 99, 0.94), rgba(15, 107, 70, 0.94)),
+        linear-gradient(135deg, #123d63, #0f6b46);
+      color: #f8fff9;
+      border-radius: 28px;
+      padding: 34px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: auto -60px -70px auto;
+      width: 260px;
+      height: 260px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.09);
+      filter: blur(2px);
+    }
+
+    .eyebrow {
+      display: inline-block;
+      margin-bottom: 12px;
+      padding: 6px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.10);
+      font-size: 0.84rem;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3 {
+      line-height: 1.15;
+      margin: 0 0 14px;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 4vw, 3.4rem);
+      max-width: 840px;
+    }
+
+    h2 {
+      font-size: clamp(1.45rem, 2.5vw, 2rem);
+      margin-top: 0;
+    }
+
+    h3 {
+      font-size: 1.08rem;
+    }
+
+    p {
+      margin: 0 0 14px;
+    }
+
+    .hero p {
+      font-size: 1.06rem;
+      max-width: 880px;
+      color: rgba(248, 255, 249, 0.94);
+    }
+
+    .grid {
+      display: grid;
+      gap: 18px;
+      margin-top: 22px;
+    }
+
+    .grid.cols-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .grid.cols-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .card,
+    .section,
+    .flow-box {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .card {
+      padding: 18px;
+    }
+
+    .card strong {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--accent-3);
+    }
+
+    .section {
+      margin-top: 22px;
+      padding: 28px;
+    }
+
+    .lede {
+      font-size: 1.02rem;
+      color: var(--muted);
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .badge {
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: var(--panel-strong);
+      border: 1px solid var(--line);
+      font-size: 0.9rem;
+      color: var(--ink);
+    }
+
+    .callout {
+      margin: 20px 0;
+      padding: 16px 18px;
+      border-left: 5px solid var(--accent);
+      background: #eef8f2;
+      border-radius: 12px;
+    }
+
+    .warn {
+      border-left-color: var(--accent-2);
+      background: #fff2ea;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+      align-items: start;
+    }
+
+    .flow-box {
+      padding: 16px;
+      min-height: 190px;
+      position: relative;
+    }
+
+    .flow-box::after {
+      content: "→";
+      position: absolute;
+      right: -10px;
+      top: calc(50% - 14px);
+      font-size: 1.6rem;
+      color: var(--accent-2);
+      font-weight: 700;
+    }
+
+    .flow-box:last-child::after {
+      display: none;
+    }
+
+    .flow-step {
+      display: inline-flex;
+      width: 34px;
+      height: 34px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .mini-title {
+      color: var(--accent-3);
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    ul, ol {
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    li + li {
+      margin-top: 8px;
+    }
+
+    code {
+      font-family: var(--mono);
+      font-size: 0.92em;
+      background: rgba(18, 61, 99, 0.07);
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+
+    pre {
+      overflow-x: auto;
+      background: #1c2622;
+      color: #f5fffb;
+      padding: 18px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      font-family: var(--mono);
+      font-size: 0.92rem;
+      line-height: 1.55;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      margin-top: 16px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+    }
+
+    th,
+    td {
+      border: 1px solid var(--line);
+      padding: 12px 14px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #efe5d3;
+      color: #213329;
+      font-size: 0.92rem;
+    }
+
+    td {
+      background: rgba(255, 255, 255, 0.64);
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .ref-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .ref-item {
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: #f8f2e7;
+      border: 1px solid var(--line);
+      font-family: var(--mono);
+      font-size: 0.9rem;
+      color: #2e3c34;
+      word-break: break-word;
+    }
+
+    .footnote {
+      margin-top: 16px;
+      font-size: 0.93rem;
+      color: var(--muted);
+    }
+
+    @media (max-width: 1080px) {
+      .grid.cols-3,
+      .flow,
+      .two-col {
+        grid-template-columns: 1fr;
+      }
+
+      .grid.cols-2 {
+        grid-template-columns: 1fr;
+      }
+
+      .flow-box::after {
+        content: "↓";
+        right: auto;
+        left: calc(50% - 8px);
+        top: auto;
+        bottom: -18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div class="eyebrow">Detailed Technical Analysis</div>
+      <h1>How the <code>graph_rag_knowledgebase</code> app built its Graph RAG</h1>
+      <p>
+        This document explains, based on the actual project source code, how the application builds
+        a legal retrieval pipeline that combines <strong>vector RAG</strong>, <strong>optional GraphRAG</strong>,
+        a <strong>legal ontology</strong>, <strong>LLM-driven entity and relation extraction</strong>, and a
+        <strong>persisted-triples fallback</strong> when the primary graph query fails.
+      </p>
+      <div class="badge-row">
+        <span class="badge">Python 3.14.3</span>
+        <span class="badge">Streamlit</span>
+        <span class="badge">LangChain</span>
+        <span class="badge">MongoDB Atlas Vector Search</span>
+        <span class="badge">MongoDBGraphStore</span>
+        <span class="badge">ChatOpenAI + Voyage embeddings</span>
+      </div>
+    </section>
+
+    <div class="grid cols-3">
+      <article class="card">
+        <strong>Short summary</strong>
+        The app does not implement a GraphRAG "from scratch" with custom graph traversal algorithms. It uses
+        <code>MongoDBGraphStore</code> from the <code>langchain-mongodb</code> integration to extract and persist
+        graph structure, while maintaining a classic vector pipeline as the primary retrieval path.
+      </article>
+      <article class="card">
+        <strong>Core idea</strong>
+        The legal knowledge base is represented in two complementary ways simultaneously: as semantically indexed
+        text and as an entity/relationship network. This allows the app to answer by textual similarity as well as
+        by more explicit semantic connections.
+      </article>
+      <article class="card">
+        <strong>Key point</strong>
+        In practice, the UI executes two parallel paths: <code>Vector RAG answer</code> and, optionally,
+        <code>GraphRAG answer</code>. The graph therefore complements the application — it does not replace
+        the vector pipeline.
+      </article>
+    </div>
+
+    <section class="section">
+      <h2>1. Overall architecture overview</h2>
+      <p class="lede">
+        The project organises the problem into four layers: semantic data modelling, vector indexing,
+        graph ingestion, and query orchestration through a Streamlit interface.
+      </p>
+
+      <div class="flow">
+        <div class="flow-box">
+          <div class="flow-step">1</div>
+          <div class="mini-title">Dataset &amp; ontology</div>
+          Synthetic legal documents and explicit relations are generated in JSONL format. A legal ontology
+          in TTL defines classes and relations that guide the domain representation.
+        </div>
+        <div class="flow-box">
+          <div class="flow-step">2</div>
+          <div class="mini-title">Vector representation</div>
+          Each document becomes a LangChain <code>Document</code> and receives an embedding via the Atlas
+          Embedding API using the <code>voyage-4-large</code> model.
+        </div>
+        <div class="flow-box">
+          <div class="flow-step">3</div>
+          <div class="mini-title">Graph representation</div>
+          The same documents can be sent to <code>MongoDBGraphStore</code>, which uses an LLM to extract
+          entities and relations and write them to the graph collection.
+        </div>
+        <div class="flow-box">
+          <div class="flow-step">4</div>
+          <div class="mini-title">Query</div>
+          The user's question goes through a <code>top_k</code> vector search and, if enabled, through
+          <code>graph_store.chat_response(question)</code>.
+        </div>
+        <div class="flow-box">
+          <div class="flow-step">5</div>
+          <div class="mini-title">Resilience</div>
+          If the primary GraphRAG query fails, the app uses the relations already persisted in
+          <code>legal_relations</code> to build a factual fallback prompt.
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>2. How the legal data was modelled</h2>
+      <p>
+        The application starts from a small but semantically well-chosen synthetic dataset. In
+        <code>rag_knowledgebase/dataset.py</code>, there are 12 documents covering norms, provisions, decisions,
+        proceedings, courts, doctrine, and topics. This is important because GraphRAG depends on material with
+        identifiable entities and links to generate a useful graph.
+      </p>
+
+      <div class="callout">
+        The project does not use a massive raw legal corpus. Instead, it creates a controlled domain sample
+        to demonstrate the GraphRAG mechanism with high readability and predictable structure.
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Element</th>
+              <th>How it appears in the project</th>
+              <th>Role in GraphRAG</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Documents</td>
+              <td>Norm, Provision, Decision, Case, Court, Doctrine, and Topic</td>
+              <td>Serve as both the textual base and the raw material for entity and relation extraction.</td>
+            </tr>
+            <tr>
+              <td>Relations</td>
+              <td><code>hasProvision</code>, <code>applies</code>, <code>cites</code>, <code>decidesCase</code>, <code>heardByCourt</code>, <code>aboutTopic</code></td>
+              <td>Connect legal grounds, cases, courts, and topics, enabling reasoning through semantic links.</td>
+            </tr>
+            <tr>
+              <td>Ontology</td>
+              <td>TTL file with legal classes and properties</td>
+              <td>Provides conceptual coherence to the domain and explains what types of nodes and edges are meaningful.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        The <code>dataset.py</code> file defines concrete relations — for example: the decision
+        <code>decision_stj_resp_123456</code> applies <code>prov_cc_art_186</code> and <code>prov_cc_art_927</code>,
+        and also cites <code>norm_cc_2002</code>. This is an excellent GraphRAG pattern because it creates a
+        multi-hop path across decision, legal ground, parent norm, case, and topic.
+      </p>
+
+      <pre>STJ Decision  -> applies    -> Art. 186
+STJ Decision  -> applies    -> Art. 927
+STJ Decision  -> cites      -> Civil Code
+STJ Decision  -> decidesCase -> REsp 123456
+REsp 123456   -> heardByCourt -> STJ
+Art. 186      -> aboutTopic  -> Moral Damages</pre>
+
+      <p>
+        There is also an important implementation detail: the function <code>generate_legal_dataset(...)</code>
+        only writes the minimal ontology embedded in the code if the TTL file does not yet exist. Since the
+        project already ships a richer <code>data/legal_ontology.ttl</code>, that more complete file tends to be
+        preserved during actual usage.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2>3. How the vector pipeline was built</h2>
+      <p>
+        The vector path is the backbone of the primary response. It is implemented in
+        <code>rag_knowledgebase/rag_pipeline.py</code> and follows a classic RAG flow, with a few
+        relevant choices specific to the legal domain.
+      </p>
+
+      <ol>
+        <li>
+          The app creates its own embeddings client — the <code>VoyageEmbeddings</code> class — which calls
+          the Atlas Embedding API at <code>https://ai.mongodb.com/v1/embeddings</code>.
+        </li>
+        <li>
+          Each row in the dataset is converted into a LangChain <code>Document</code> by <code>_build_documents</code>.
+        </li>
+        <li>
+          The document's text field is not just raw content. It concatenates <code>Title</code>, <code>Type</code>,
+          <code>Topic</code>, and <code>Text</code>, injecting semantic metadata directly into the indexed content.
+        </li>
+        <li>
+          The vector store uses <code>MongoDBAtlasVectorSearch</code> with cosine similarity.
+        </li>
+        <li>
+          At query time, the app calls <code>similarity_search_with_score(question, k=settings.top_k)</code>
+          and uses the returned documents as LLM context.
+        </li>
+      </ol>
+
+      <div class="two-col">
+        <div class="card">
+          <strong>Key technique: enriched indexed text</strong>
+          Rather than vectorising only the main content, the app includes the title, type, and topic in the
+          <code>page_content</code>. For a legal domain, this improves retrieval because questions often
+          reference document category, subject matter, or normative basis — not just literal text excerpts.
+        </div>
+        <div class="card">
+          <strong>Key technique: parallel metadata</strong>
+          The same document carries a structured <code>metadata</code> object containing <code>doc_id</code>,
+          <code>doc_type</code>, <code>topic</code>, <code>jurisdiction</code>, <code>source_type</code>,
+          dates, and case number — laying the groundwork for filtering, context inspection, and explainability.
+        </div>
+      </div>
+
+      <div class="callout">
+        Code-grounded inference: since the vector store is instantiated with <code>text_key="text"</code> and
+        <code>embedding_key="embedding"</code> and receives <code>add_documents(docs)</code>, the vector collection
+        acts as a repository of indexable text + embedding vector + associated metadata.
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>4. How the GraphRAG was actually built</h2>
+      <p>
+        The project's GraphRAG is born from reusing the same documents already used in the vector pipeline,
+        but routing them to a different retrieval infrastructure: <code>MongoDBGraphStore</code>. The app does
+        not manually describe entity parsing algorithms, normalisation rules, or detailed graph persistence.
+        Instead, it delegates all of that to the library implementation.
+      </p>
+
+      <ol>
+        <li>
+          The code dynamically loads <code>MongoDBGraphStore</code> from
+          <code>langchain_mongodb.graphrag.graph</code>.
+        </li>
+        <li>
+          It creates a <code>ChatOpenAI</code> instance with <code>temperature=0</code> and passes it as the
+          <code>entity_extraction_model</code>.
+        </li>
+        <li>
+          The method <code>graph_store.add_documents(docs)</code> receives the legal documents and triggers
+          the entity and relation extraction step.
+        </li>
+        <li>
+          At query time, <code>graph_store.chat_response(question)</code> is called to obtain the graph-based answer.
+        </li>
+      </ol>
+
+      <div class="callout">
+        In short: the project assembles its GraphRAG by composing ready-made components, not by hand-crafting
+        graph algorithms. The graph intelligence is split between the dataset design, the domain ontology,
+        and the <code>MongoDBGraphStore</code> library, which uses an LLM to structure knowledge.
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Layer</th>
+              <th>What the app controls directly</th>
+              <th>What is encapsulated in the library</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Domain modelling</td>
+              <td>Document types, JSONL relations, and TTL ontology</td>
+              <td>Final normalisation performed internally by the GraphStore</td>
+            </tr>
+            <tr>
+              <td>Graph extraction</td>
+              <td>LLM selection and document submission</td>
+              <td>Entity identification, node/edge creation, and persisted format</td>
+            </tr>
+            <tr>
+              <td>GraphRAG query</td>
+              <td>Call to <code>chat_response(question)</code></td>
+              <td>Internal retrieval and graph-based response strategy</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>
+        There is also an important clue in <code>db_setup.py</code>: the graph collection receives indexes on
+        fields such as <code>entity_id</code>, <code>source_id</code>, <code>target_id</code>, and
+        <code>relation</code>. This points to an expected structure with nodes and edges, though the exact
+        final format remains dependent on the library.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2>5. Techniques used by the app</h2>
+      <div class="grid cols-2">
+        <article class="card">
+          <strong>1. Ontology-driven modelling</strong>
+          The domain is not treated as undifferentiated text. The app starts from a legal ontology with
+          classes and relations, giving the graph semantic meaning and explaining why certain connections
+          are valid.
+        </article>
+        <article class="card">
+          <strong>2. Controlled synthetic dataset</strong>
+          Rather than ingesting a noisy corpus, the project creates a small, coherent set — ideal for
+          demonstrating structural precision, multi-hop traversal, and legal causality.
+        </article>
+        <article class="card">
+          <strong>3. Specialised semantic embeddings</strong>
+          Using <code>voyage-4-large</code> via the Atlas Embedding API gives the app a robust semantic
+          search layer even before the graph comes into play.
+        </article>
+        <article class="card">
+          <strong>4. LLM-driven graph extraction</strong>
+          The graph is not pre-built from the JSONL. The app uses an LLM as an entity extraction model
+          to transform documents into a navigable structure.
+        </article>
+        <article class="card">
+          <strong>5. Restrictive prompting</strong>
+          In the vector response, the system instructs the LLM to answer only based on the retrieved
+          context and to acknowledge lack of evidence when necessary — reducing hallucination.
+        </article>
+        <article class="card">
+          <strong>6. Graceful degradation</strong>
+          When the primary GraphStore fails, the app does not abandon the query. It falls back to the
+          triples persisted in <code>legal_relations</code> to construct a factual contingency response.
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>6. Full execution flow</h2>
+      <ol>
+        <li>The user opens Streamlit and the app validates Python 3.14.3, environment variables, and configuration.</li>
+        <li>If the database does not yet exist, the app creates collections, B-Tree indexes, an Atlas Search index, and an Atlas Vector Search index.</li>
+        <li>The user can generate the legal dataset and explicit relations from the sidebar button.</li>
+        <li>During vector ingestion, documents are converted to <code>Document</code> objects, embedded, and written to the vector collection.</li>
+        <li>During graph ingestion, the same documents are sent to <code>MongoDBGraphStore</code> with an extraction LLM.</li>
+        <li>At query time, the vector answer is always built first, based on the semantically closest documents.</li>
+        <li>If the option is checked, the app also requests a GraphRAG answer.</li>
+        <li>If the graph query fails, the app attempts to answer using the JSONL relations already persisted in MongoDB.</li>
+        <li>The interface displays the vector answer, the retrieved contexts, and — separately — the graph answer.</li>
+      </ol>
+    </section>
+
+    <section class="section">
+      <h2>7. What this app does very well</h2>
+      <ul>
+        <li>Separates vector ingestion from graph ingestion, making it easy to demonstrate each pipeline stage independently.</li>
+        <li>Uses a plausible legal model with links between norms, provisions, decisions, proceedings, and topics.</li>
+        <li>Illustrates the difference between retrieving similar text and retrieving structured knowledge.</li>
+        <li>Preserves explainability — the UI exposes retrieved contexts and document metadata.</li>
+        <li>Anticipates GraphRAG operational failure and provides a fallback, which is a very practical decision for demos and PoCs.</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>8. Limitations and critical observations</h2>
+      <div class="callout warn">
+        This part matters: the app is a solid proof of concept, but it is not yet a production-grade legal GraphRAG.
+      </div>
+
+      <ul>
+        <li>
+          There is no chunking. Each record is indexed as a whole document. For a real legal corpus, this tends
+          to limit retrieval granularity and precision.
+        </li>
+        <li>
+          GraphRAG is not combined with the vector path into a single hybrid strategy. The UI simply displays
+          both answers side by side.
+        </li>
+        <li>
+          The <code>ensure_database_objects</code> function creates indexes automatically only when the database
+          does not yet exist. If the database already exists without the correct indexes, initialisation is skipped.
+        </li>
+        <li>
+          The fallback via relations reads up to 30 edges without filtering by question, so it is resilient
+          but still not very selective.
+        </li>
+        <li>
+          The graph relies on LLM calls for entity extraction, which introduces cost, latency, and possible
+          variability in results.
+        </li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>9. Conclusion</h2>
+      <p>
+        The app builds its GraphRAG from a simple yet highly effective demonstration idea: take a small but
+        semantically rich legal domain, generate two complementary representations of that domain, and query both.
+      </p>
+      <p>
+        The vector layer handles classic semantic retrieval. The graph layer attempts to structure knowledge
+        about legal entities and relationships. The result is an application that shows, in a didactic way,
+        how to move from a purely textual RAG to a RAG with explicit awareness of legal relationships.
+      </p>
+      <p>
+        In summary: this project does not invent a new GraphRAG algorithm — it orchestrates existing components
+        effectively to show how a legal GraphRAG can be built on top of MongoDB, LangChain, embeddings, and LLMs.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2>10. Analysed code references</h2>
+      <p class="lede">
+        The paths below correspond to the files that underpin this analysis.
+      </p>
+      <div class="ref-list">
+        <div class="ref-item">graph_rag_knowledgebase/app.py#L18-L265</div>
+        <div class="ref-item">graph_rag_knowledgebase/rag_knowledgebase/rag_pipeline.py#L29-L288</div>
+        <div class="ref-item">graph_rag_knowledgebase/rag_knowledgebase/db_setup.py#L21-L160</div>
+        <div class="ref-item">graph_rag_knowledgebase/rag_knowledgebase/dataset.py#L41-L197</div>
+        <div class="ref-item">graph_rag_knowledgebase/rag_knowledgebase/config.py#L13-L35</div>
+        <div class="ref-item">graph_rag_knowledgebase/data/legal_ontology.ttl</div>
+        <div class="ref-item">graph_rag_knowledgebase/docs/legal_ontology_en.txt</div>
+      </div>
+      <p class="footnote">
+        Methodological note: where the exact behaviour depends on external libraries, this analysis makes
+        that explicit and distinguishes between what is directly implemented in the repository and what is
+        inferred from the calls made.
+      </p>
+    </section>
+  </div>
+</body>
+</html>

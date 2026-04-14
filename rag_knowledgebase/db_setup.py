@@ -70,32 +70,24 @@ def _upsert_search_index(collection, name: str, definition: dict[str, Any], inde
     return "created"
 
 
-def ensure_database_objects(settings: Settings) -> dict[str, Any]:
-    client = get_client(settings.mongodb_uri)
-    db_exists = settings.mongodb_db in client.list_database_names()
+def vector_index_status(settings: Settings) -> str:
+    """Return the Atlas Vector Search index status.
 
-    if db_exists:
-        return {
-            "db_existed": True,
-            "db_created": False,
-            "init_skipped": True,
-            "created_collections": [],
-            "search_actions": {},
-            "warnings": [],
-        }
+    Possible values: 'READY', 'BUILDING', 'DOES_NOT_EXIST', 'UNKNOWN'.
+    """
+    try:
+        client = get_client(settings.mongodb_uri)
+        vector_coll = client[settings.mongodb_db][settings.vector_collection]
+        for idx in vector_coll.list_search_indexes():
+            if idx.get("name") == settings.vector_index_name:
+                return idx.get("status", "UNKNOWN")
+        return "DOES_NOT_EXIST"
+    except Exception:  # noqa: BLE001
+        return "UNKNOWN"
 
-    db_target = client[settings.mongodb_db]
-    created_collections = _create_collections(
-        db_target,
-        [settings.vector_collection, settings.relations_collection, settings.graph_collection],
-    )
 
-    vector_coll = db_target[settings.vector_collection]
-    rel_coll = db_target[settings.relations_collection]
-    graph_coll = db_target[settings.graph_collection]
-
-    _create_standard_indexes(vector_coll, rel_coll, graph_coll)
-
+def _ensure_search_indexes(vector_coll, settings: Settings) -> tuple[dict[str, str], list[str]]:
+    """Create or update Atlas Search and Vector Search indexes. Always runs."""
     search_definition = {
         "mappings": {
             "dynamic": False,
@@ -147,9 +139,38 @@ def ensure_database_objects(settings: Settings) -> dict[str, Any]:
         )
     except Exception as exc:  # noqa: BLE001
         warnings.append(
-            "Não foi possível criar/atualizar índices Atlas Search automaticamente. "
-            f"Detalhe: {exc}"
+            f"Could not create/update Atlas Search indexes automatically. Detail: {exc}"
         )
+    return search_actions, warnings
+
+
+def ensure_database_objects(settings: Settings) -> dict[str, Any]:
+    client = get_client(settings.mongodb_uri)
+    db_exists = settings.mongodb_db in client.list_database_names()
+    db_target = client[settings.mongodb_db]
+
+    vector_coll = db_target[settings.vector_collection]
+    rel_coll = db_target[settings.relations_collection]
+    graph_coll = db_target[settings.graph_collection]
+
+    if db_exists:
+        # DB already exists — still ensure search indexes are present/up-to-date.
+        search_actions, warnings = _ensure_search_indexes(vector_coll, settings)
+        return {
+            "db_existed": True,
+            "db_created": False,
+            "init_skipped": False,
+            "created_collections": [],
+            "search_actions": search_actions,
+            "warnings": warnings,
+        }
+
+    created_collections = _create_collections(
+        db_target,
+        [settings.vector_collection, settings.relations_collection, settings.graph_collection],
+    )
+    _create_standard_indexes(vector_coll, rel_coll, graph_coll)
+    search_actions, warnings = _ensure_search_indexes(vector_coll, settings)
 
     return {
         "db_existed": db_exists,

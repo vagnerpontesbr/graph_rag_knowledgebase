@@ -6,8 +6,8 @@ import sys
 import streamlit as st
 
 from rag_knowledgebase.config import get_settings
-from rag_knowledgebase.dataset import generate_legal_dataset
-from rag_knowledgebase.db_setup import ensure_database_objects
+from rag_knowledgebase.dataset import generate_legal_dataset, generate_legal_dataset_en
+from rag_knowledgebase.db_setup import ensure_database_objects, vector_index_status
 from rag_knowledgebase.rag_pipeline import (
     ingest_graph_documents,
     ingest_vector_documents,
@@ -61,12 +61,7 @@ if "db_setup_result" not in st.session_state:
 
 db_setup_result = st.session_state["db_setup_result"]
 if db_setup_result.get("db_created"):
-    st.success(
-        "Banco de dados não encontrado. Criando os objetos em banco de dados "
-        "(collections, indexes e search indexes)."
-    )
-elif db_setup_result.get("init_skipped"):
-    st.info("Banco de dados já existe. Scripts de inicialização não foram executados.")
+    st.success("Database created — collections, indexes, and search indexes are ready.")
 if db_setup_result.get("warnings"):
     for warning in db_setup_result["warnings"]:
         st.warning(warning)
@@ -191,17 +186,54 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
 
-    if st.button("Generate legal dataset"):
+    if st.button("Generate legal dataset Português"):
         docs_count, rel_count = generate_legal_dataset(
             dataset_path=settings.dataset_path,
             relations_path=settings.relations_path,
             ontology_path=settings.ontology_path,
         )
-        st.success(f"Dataset generated: {docs_count} docs, {rel_count} relations")
+        st.success(f"Dataset generated (PT): {docs_count} docs, {rel_count} relations")
+
+    if st.button("Generate legal dataset English"):
+        docs_count, rel_count = generate_legal_dataset_en(
+            dataset_path=settings.dataset_path,
+            relations_path=settings.relations_path,
+            ontology_path=settings.ontology_path,
+        )
+        st.success(f"Dataset generated (EN): {docs_count} docs, {rel_count} relations")
+        st.warning("Run **Ingest vector store** to replace the database documents with the English version.")
 
     if st.button("Ingest vector store"):
         inserted = ingest_vector_documents(settings)
         st.success(f"Vector ingest completed. Documents added: {inserted}")
+        # Bust the cached index status so the badge refreshes after ingest
+        st.session_state.pop("_index_status", None)
+
+    # ── Vector Search index status badge ──────────────────────────────────
+    st.markdown("---")
+    if st.button("Refresh index status"):
+        st.session_state.pop("_index_status", None)
+
+    if "_index_status" not in st.session_state:
+        st.session_state["_index_status"] = vector_index_status(settings)
+
+    _status = st.session_state["_index_status"]
+    _badge_color = {
+        "READY":          "#00684A",
+        "BUILDING":       "#C75D15",
+        "DOES_NOT_EXIST": "#B91C1C",
+    }.get(_status, "#6B7C8A")
+
+    st.markdown(
+        f'<div style="padding:6px 10px;border-radius:8px;background:{_badge_color};'
+        f'color:#fff;font-size:0.82rem;font-weight:700;text-align:center;">'
+        f"Vector index: {_status}</div>",
+        unsafe_allow_html=True,
+    )
+    if _status == "BUILDING":
+        st.caption("Index is still building — vector search will fail until it reaches READY.")
+    elif _status == "DOES_NOT_EXIST":
+        st.caption("Index not found. Run 'Ingest vector store' to create it.")
 
     if st.button("Ingest graph store (optional)"):
         try:
@@ -211,24 +243,47 @@ with st.sidebar:
             st.error(f"Graph ingest failed: {exc}")
 
 st.subheader("Ask a legal question")
-question = st.text_area(
-    "Question",
-    value="Qual dispositivo legal fundamenta responsabilidade por dano moral?",
-    height=90,
-)
-use_graph_rag = st.checkbox("Also run GraphRAG answer", value=True)
+
+_SAMPLE_PT = "Qual dispositivo legal fundamenta responsabilidade por dano moral?"
+_SAMPLE_EN = "Which legal provision establishes liability for moral damages?"
+
+# Initialise session state on first load
+if "question_area" not in st.session_state:
+    st.session_state["question_area"] = _SAMPLE_PT
+if "_lang_english" not in st.session_state:
+    st.session_state["_lang_english"] = False
+
+col_graph, col_lang = st.columns([2, 2])
+with col_graph:
+    use_graph_rag = st.checkbox("Also run GraphRAG answer", value=True)
+with col_lang:
+    english_mode = st.checkbox("Questions in English", value=st.session_state["_lang_english"])
+
+# When the language toggle changes, replace the question with the matching sample
+if english_mode != st.session_state["_lang_english"]:
+    st.session_state["_lang_english"] = english_mode
+    st.session_state["question_area"] = _SAMPLE_EN if english_mode else _SAMPLE_PT
+    st.rerun()
+
+question = st.text_area("Question", height=90, key="question_area")
 
 if st.button("Run retrieval"):
-    result = legal_rag_answer(settings=settings, question=question, use_graph_rag=use_graph_rag)
+    if english_mode:
+        st.info("English mode — make sure you have generated **and ingested** the English dataset.")
+
+    try:
+        result = legal_rag_answer(
+            settings=settings,
+            question=question,
+            use_graph_rag=use_graph_rag,
+            language="en" if english_mode else "pt",
+        )
+    except Exception as exc:  # noqa: BLE001
+        st.error(f"Retrieval failed: {exc}")
+        st.stop()
 
     st.markdown("### Vector RAG answer")
     st.write(result["vector_answer"])
-
-    st.markdown("### Retrieved contexts")
-    for i, d in enumerate(result["retrieved_docs"], start=1):
-        with st.expander(f"Context {i}: {d['title']}"):
-            st.write(d["text"])
-            st.json(d["metadata"])
 
     if use_graph_rag:
         st.markdown("### GraphRAG answer")
@@ -245,6 +300,24 @@ if st.button("Run retrieval"):
                 "GraphRAG answer unavailable. Check graph ingest and model credentials. "
                 f"Detail: {detail}"
             )
+
+    st.markdown("### Retrieved contexts")
+    # Detect document language from the first retrieved doc to warn the user
+    _first_text = result["retrieved_docs"][0]["text"] if result["retrieved_docs"] else ""
+    _docs_are_portuguese = any(
+        word in _first_text.lower()
+        for word in ("código", "artigo", "responsabilidade", "jurídico", "obrigado", "norma")
+    )
+    if english_mode and _docs_are_portuguese:
+        st.warning(
+            "The retrieved documents appear to be in **Portuguese**. "
+            "Generate the English dataset and click **Ingest vector store** to switch the knowledge base to English."
+        )
+
+    for i, d in enumerate(result["retrieved_docs"], start=1):
+        with st.expander(f"Context {i}: {d['title']}"):
+            st.write(d["text"])
+            st.json(d["metadata"])
 
 st.markdown("---")
 st.caption("Dataset files")

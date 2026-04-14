@@ -195,3 +195,137 @@ def generate_legal_dataset(dataset_path: Path, relations_path: Path, ontology_pa
         ontology_path.write_text(ONTOLOGY_TTL, encoding="utf-8")
 
     return len(documents), len(relations)
+
+
+def _legal_documents_en() -> list[dict]:
+    return [
+        {
+            "doc_id": "norm_cc_2002",
+            "doc_type": "Norm",
+            "title": "Brazilian Civil Code (Law 10.406/2002)",
+            "text": "Brazilian Civil Code. Primary normative basis for civil liability, establishing the duty to repair both material and moral damages caused by unlawful acts.",
+            "jurisdiction": "BR",
+            "topic": "Civil Liability",
+            "published_on": "2002-01-10",
+            "source_type": "Statute",
+        },
+        {
+            "doc_id": "prov_cc_art_186",
+            "doc_type": "Provision",
+            "title": "Art. 186 of the Civil Code",
+            "text": "Any person who, by voluntary act or omission, negligence, or recklessness, violates a right and causes harm to another person commits an unlawful act.",
+            "jurisdiction": "BR",
+            "topic": "Moral Damages",
+            "published_on": "2002-01-10",
+            "source_type": "Article",
+        },
+        {
+            "doc_id": "prov_cc_art_927",
+            "doc_type": "Provision",
+            "title": "Art. 927 of the Civil Code",
+            "text": "Any person who, through an unlawful act, causes harm to another is obliged to repair it.",
+            "jurisdiction": "BR",
+            "topic": "Civil Liability",
+            "published_on": "2002-01-10",
+            "source_type": "Article",
+        },
+        {
+            "doc_id": "norm_cdc_8078_1990",
+            "doc_type": "Norm",
+            "title": "Consumer Protection Code (Law 8.078/1990)",
+            "text": "Governs consumer protection in Brazil and establishes strict liability for defective products and services provided by suppliers.",
+            "jurisdiction": "BR",
+            "topic": "Consumer Law",
+            "published_on": "1990-09-11",
+            "source_type": "Statute",
+        },
+        {
+            "doc_id": "prov_cdc_art_14",
+            "doc_type": "Provision",
+            "title": "Art. 14 of the Consumer Protection Code",
+            "text": "Service providers are strictly liable, regardless of fault, for damages caused to consumers by defects in the provision of services.",
+            "jurisdiction": "BR",
+            "topic": "Consumer Law",
+            "published_on": "1990-09-11",
+            "source_type": "Article",
+        },
+        {
+            "doc_id": "court_stj",
+            "doc_type": "Court",
+            "title": "Superior Court of Justice (STJ)",
+            "text": "The Superior Court of Justice is the highest court responsible for standardising the interpretation of federal legislation in Brazil.",
+            "jurisdiction": "BR",
+            "topic": "Civil Procedure",
+            "source_type": "Adjudicating Body",
+        },
+        {
+            "doc_id": "case_resp_123456",
+            "doc_type": "Case",
+            "title": "Special Appeal 123456 (REsp 123456)",
+            "text": "Special appeal involving a claim for compensation for moral and material damages arising from a failure in service provision.",
+            "jurisdiction": "BR",
+            "topic": "Moral Damages",
+            "case_number": "REsp 123456",
+            "source_type": "Court Case",
+        },
+        {
+            "doc_id": "decision_stj_resp_123456",
+            "doc_type": "Decision",
+            "title": "STJ Ruling — REsp 123456",
+            "text": "The STJ upheld the duty to compensate, applying Arts. 186 and 927 of the Civil Code, with analysis of causation and the extent of moral damages.",
+            "jurisdiction": "BR",
+            "topic": "Moral Damages",
+            "decision_date": "2024-05-12",
+            "source_type": "Ruling",
+        },
+        {
+            "doc_id": "decision_stj_resp_998877",
+            "doc_type": "Decision",
+            "title": "STJ Ruling — REsp 998877",
+            "text": "Ruling on strict liability in a consumer relationship, grounded in Art. 14 of the Consumer Protection Code and the Court's established precedents.",
+            "jurisdiction": "BR",
+            "topic": "Consumer Law",
+            "decision_date": "2023-10-03",
+            "source_type": "Ruling",
+        },
+        {
+            "doc_id": "doctrine_dano_moral_quantum",
+            "doc_type": "Doctrine",
+            "title": "Doctrine: Calculation of moral damages compensation",
+            "text": "The compensation amount for moral damages must consider proportionality, severity of harm, the parties' economic capacity, and the punitive deterrence function.",
+            "jurisdiction": "BR",
+            "topic": "Moral Damages",
+            "source_type": "Legal Doctrine",
+        },
+        {
+            "doc_id": "topic_responsabilidade_civil",
+            "doc_type": "Topic",
+            "title": "Topic: Civil Liability",
+            "text": "Civil liability concerns the duty to repair damages arising from unlawful acts, fault, risk of activity, and strict liability in cases provided for by law.",
+            "jurisdiction": "BR",
+            "topic": "Civil Liability",
+            "source_type": "Taxonomy",
+        },
+        {
+            "doc_id": "topic_dano_moral",
+            "doc_type": "Topic",
+            "title": "Topic: Moral Damages",
+            "text": "Moral damages refer to injury to personality rights and non-patrimonial interests, which are subject to civil compensation under Brazilian law.",
+            "jurisdiction": "BR",
+            "topic": "Moral Damages",
+            "source_type": "Taxonomy",
+        },
+    ]
+
+
+def generate_legal_dataset_en(dataset_path: Path, relations_path: Path, ontology_path: Path) -> tuple[int, int]:
+    documents = _legal_documents_en()
+    relations = _relations()
+
+    _write_jsonl(dataset_path, documents)
+    _write_jsonl(relations_path, relations)
+    ontology_path.parent.mkdir(parents=True, exist_ok=True)
+    if not ontology_path.exists():
+        ontology_path.write_text(ONTOLOGY_TTL, encoding="utf-8")
+
+    return len(documents), len(relations)
