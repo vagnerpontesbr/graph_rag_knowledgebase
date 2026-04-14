@@ -1,6 +1,6 @@
 # graph_rag_knowledgebase
 
-Aplicação de exemplo de RAG jurídico com Python + LangChain + MongoDB + Streamlit.
+Sample legal RAG application built with Python + LangChain + MongoDB + Streamlit.
 
 ## Stack
 
@@ -16,7 +16,7 @@ Aplicação de exemplo de RAG jurídico com Python + LangChain + MongoDB + Strea
 - Optionally ingests docs into MongoDB Graph Store for GraphRAG exploration.
 - Answers legal questions using retrieved context.
 
-## Estrutura do diretório
+## Directory Structure
 
 ```text
 graph_rag_knowledgebase/
@@ -45,9 +45,9 @@ graph_rag_knowledgebase/
 
 ## Setup
 
-1. Criar e ativar ambiente virtual.
-2. Instalar dependências.
-3. Configurar variáveis no `.env`.
+1. Create and activate a virtual environment.
+2. Install dependencies.
+3. Configure variables in `.env`.
 
 ```bash
 cd /Users/vagnerpontes/Documents/Demos/graph_rag_knowledgebase
@@ -57,28 +57,28 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-### Versão de Python
+### Python Version
 
-- Requerido: `Python 3.14.3`.
-- O script `scripts/run_streamlit.sh` valida essa versão e aborta se estiver diferente.
-- Os scripts `scripts/*.py` e o `app.py` também validam essa versão em runtime.
+- Required: `Python 3.14.3`.
+- The `scripts/run_streamlit.sh` script validates this version and aborts if it differs.
+- The `scripts/*.py` scripts and `app.py` also validate this version at runtime.
 
-### Variáveis mínimas no `.env`
+### Minimum `.env` Variables
 
-- `ATLAS_MODEL_API_KEY` (recomendado, usado na Atlas Embedding API)
-- `VOYAGE_API_KEY` (fallback compatível)
-- `OPENAI_API_KEY` (usada pelo LLM de resposta e GraphRAG)
+- `ATLAS_MODEL_API_KEY` (recommended, used by the Atlas Embedding API)
+- `VOYAGE_API_KEY` (compatible fallback)
+- `OPENAI_API_KEY` (used by the answer LLM and GraphRAG)
 - `MONGODB_URI`
 
-As demais variáveis já possuem valores padrão no `.env.example`.
+All other variables already have default values in `.env.example`.
 
-Ao iniciar o app, ele valida essas variáveis. Se faltar alguma, o app mostra erro e encerra a execução.
+When the app starts, it validates these variables. If any are missing, the app displays an error and stops.
 
-## Como executar o app
+## Running the App
 
-1. Gerar dataset jurídico sintético.
-2. Ingerir documentos no Vector Search.
-3. Subir interface Streamlit.
+1. Generate the synthetic legal dataset.
+2. Ingest documents into Vector Search.
+3. Start the Streamlit interface.
 
 ```bash
 python3.14 scripts/generate_dataset.py
@@ -86,27 +86,27 @@ python3.14 scripts/ingest_vector_store.py
 streamlit run app.py
 ```
 
-Alternativa com script:
+Alternative using the shell script:
 
 ```bash
 bash scripts/run_streamlit.sh
 ```
 
-Se o banco `MONGODB_DB` ainda não existir, o app cria automaticamente os objetos de banco:
-- collections
-- índices padrão (B-Tree)
+If the `MONGODB_DB` database does not yet exist, the app automatically creates all database objects:
+- Collections
+- Standard indexes (B-Tree)
 - Atlas Search index
 - Atlas Vector Search index
 
-Se o banco já existir, os scripts de inicialização são ignorados.
+If the database already exists, the initialization steps are skipped.
 
-### Modelo de embedding
+### Embedding Model
 
 - Provider: Voyage AI via Atlas Embedding API (`https://ai.mongodb.com/v1/embeddings`)
-- Modelo padrão: `voyage-4-large` (família Voyage 4)
-- Dimensões padrão: `1024`
+- Default model: `voyage-4-large` (Voyage 4 family)
+- Default dimensions: `1024`
 
-## Execução opcional de GraphRAG
+## Optional GraphRAG Ingestion
 
 ```bash
 python3.14 scripts/ingest_graph_store.py
