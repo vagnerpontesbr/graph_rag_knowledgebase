@@ -45,22 +45,24 @@ graph_rag_knowledgebase/
 
 ## Setup
 
-1. Create and activate a virtual environment.
-2. Install dependencies.
-3. Configure variables in `.env`.
+Dependencies are managed with [uv](https://docs.astral.sh/uv/). Install it once if you haven't already:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Then bootstrap the project:
 
 ```bash
 cd /Users/vagnerpontes/Documents/Demos/graph_rag_knowledgebase
-python3.14 -m venv .venv
-. .venv/bin/activate
-pip install -r requirements.txt
+uv sync          # creates .venv and installs all dependencies
 cp .env.example .env
 ```
 
 ### Python Version
 
-- Required: `Python 3.14.3`.
-- The `scripts/run_streamlit.sh` script validates this version and aborts if it differs.
+- Required: `Python 3.14`.
+- `pyproject.toml` pins `requires-python = "==3.14.*"` — `uv` enforces this automatically.
 - The `scripts/*.py` scripts and `app.py` also validate this version at runtime.
 
 ### Minimum `.env` Variables
@@ -81,12 +83,12 @@ When the app starts, it validates these variables. If any are missing, the app d
 3. Start the Streamlit interface.
 
 ```bash
-python3.14 scripts/generate_dataset.py
-python3.14 scripts/ingest_vector_store.py
-streamlit run app.py
+uv run python scripts/generate_dataset.py
+uv run python scripts/ingest_vector_store.py
+uv run streamlit run app.py
 ```
 
-Alternative using the shell script:
+Alternative using the shell script (runs `uv sync` + starts Streamlit in one step):
 
 ```bash
 bash scripts/run_streamlit.sh
@@ -109,7 +111,7 @@ If the database already exists, the initialization steps are skipped.
 ## Optional GraphRAG Ingestion
 
 ```bash
-python3.14 scripts/ingest_graph_store.py
+uv run python scripts/ingest_graph_store.py
 ```
 
 ## Notes
